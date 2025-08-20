@@ -1,0 +1,104 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    name: Check Version Change
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get current version
+        id: version
+        run: |
+          VERSION=$(grep '^version[[:space:]]*=' Cargo.toml | head -n1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "Version not found in Cargo.toml!" >&2
+            exit 1
+          fi
+          echo "Current version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Get latest release version
+        id: latest
+        run: |
+          LATEST=$(gh release list --limit 1 --json tagName --jq '.[0].tagName // "none"' || echo "none")
+          # Remove 'v' prefix if present for comparison
+          LATEST=${LATEST#v}
+          echo "Latest release: $LATEST"
+          echo "latest=$LATEST" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if version changed
+        id: check
+        run: |
+          if [ "${{ steps.version.outputs.version }}" = "${{ steps.latest.outputs.latest }}" ]; then
+            echo "No version change. Skipping release."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version changed from ${{ steps.latest.outputs.latest }} to ${{ steps.version.outputs.version }}"
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+  publish-crate:
+    name: Publish to crates.io
+    needs: [check-version]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CARGO_PUBLISH_KEY }}
+        env:
+          CARGO_PUBLISH_KEY: ${{ secrets.CARGO_PUBLISH_KEY }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: [check-version, publish-crate]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(needs.check-version.outputs.version, '-') }}
+          body: |
+            ## Installation
+            
+            ```toml
+            [dependencies]
+            bevy_external_surface = "${{ needs.check-version.outputs.version }}"
+            ```
+            
+            Or with specific backends:
+            ```toml
+            [dependencies]
+            bevy_external_surface = { version = "${{ needs.check-version.outputs.version }}", features = ["wgpu"] }
+            ```
+            
+            See the [crates.io page](https://crates.io/crates/bevy_external_surface) for more information.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,70 @@
+[package]
+name = "bevy_external_surface"
+version = "0.0.1-prealpha"
+edition = "2024"
+authors = ["FizzWizzleDazzle <arturmisiurev@gmail.com>"]
+description = "A Bevy plugin for rendering to external surfaces and windows"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/FizzWizZleDazzle/Bevy-External-Surface"
+keywords = ["bevy", "graphics", "rendering", "vulkan", "external-surface"]
+categories = ["game-development", "rendering", "graphics"]
+
+[dependencies]
+bevy = { version = "0.16", default-features = false, features = [
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_asset",
+    "bevy_log",
+    "multi_threaded",
+] }
+wgpu = "24.0"
+wgpu-hal = "24.0"
+ash = "0.38"
+raw-window-handle = "0.6"
+winit = { version = "0.30", optional = true }
+log = "0.4"
+thiserror = "2.0"
+bincode = "1.3"
+serde = { version = "1.0", features = ["derive"] }
+libc = "0.2"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["fs", "socket", "uio"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_System_Memory"] }
+
+[dev-dependencies]
+bevy = { version = "0.16", features = ["default"] }
+env_logger = "0.11"
+
+[features]
+default = ["winit_integration"]
+winit_integration = ["dep:winit", "bevy/bevy_winit"]
+
+# VulkanSharingPlugin Examples
+[[example]]
+name = "basic_vulkan_sharing"
+path = "examples/basic_vulkan_sharing.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "vulkan_sharing_producer"
+path = "examples/vulkan_sharing_producer.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "advanced_vulkan_sharing"
+path = "examples/advanced_vulkan_sharing.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "headless_vulkan_producer"
+path = "examples/headless_vulkan_producer.rs"
+doc-scrape-examples = true
+
+[[example]]
+name = "vulkan_sharing_consumer"
+path = "examples/vulkan_sharing_consumer.rs"
+doc-scrape-examples = true
