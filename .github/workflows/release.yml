@@ -93,12 +93,6 @@ jobs:
             bevy_external_surface = "${{ needs.check-version.outputs.version }}"
             ```
             
-            Or with specific backends:
-            ```toml
-            [dependencies]
-            bevy_external_surface = { version = "${{ needs.check-version.outputs.version }}", features = ["wgpu"] }
-            ```
-            
             See the [crates.io page](https://crates.io/crates/bevy_external_surface) for more information.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
